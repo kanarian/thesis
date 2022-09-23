@@ -7,7 +7,6 @@ class BesovTree:
     wavelet_coefficients: dict
     beta: float
 
-
     def getParentIndex(self, j, k):
         assert j > 0, f"Node on level {j} has no parent"
         return j - 1, math.floor(k / 2)
