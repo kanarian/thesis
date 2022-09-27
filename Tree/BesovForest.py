@@ -1,7 +1,5 @@
 from dataclasses import dataclass
-import pywt
 from Tree.BesovTree import BesovTree
-from WaveletTransform.WaveletTransformer import getWaveletCoefficients, inverseDWT
 
 @dataclass
 class BesovForest:
@@ -24,7 +22,7 @@ class BesovForest:
                         break
         return forest
 
-    def transformIndicesOfTreesInForest(self, forest):
+    def unsetRootFrom0_0ForAllSubtrees(self, forest):
         invertedForest = {}
         for el in forest:
             subTree = forest[el]
@@ -35,36 +33,38 @@ class BesovForest:
             invertedForest[el] = newSubtree
         return invertedForest
 
-    def inverseTransformIndicesOfTreesInForest(self,forest):
-        forest_corrected_Indices = {}
+    # This function causes all elements of the forest to be rooted at (0,0), thereby setting all
+    # subnodes to the usual conventions wrt parent-children indexing
+    def setRootTo0_0ForAllSubtrees(self, forest):
+        forestCorrectedRoots = {}
         for el in forest:
             subTree = forest[el]
             newSubtree = {}
             for index in subTree:
                 new_index = index[1] - 2 ** (index[0]) * el
                 newSubtree[(index[0], new_index)] = subTree[index]
-            forest_corrected_Indices[el] = newSubtree
-        return forest_corrected_Indices
+            forestCorrectedRoots[el] = newSubtree
+        return forestCorrectedRoots
 
     def runBesovTreeAlgorithmPerTree(self,forest):
         new_coeffs = {}
         for el in forest:
             subTree = forest[el]
-            subBesovTree = BesovTree(subTree, 0.2)
+            subBesovTree = BesovTree(subTree, self.beta)
             thisCoefficients = subBesovTree.getMinimizingPosteriorCoefficients()
             new_coeffs[el] = thisCoefficients
         return new_coeffs
 
-    def flattenDict(dict):
+    def flattenDict(self, dict):
         new_dict = {}
         for el in dict:
             new_dict = {**new_dict, **dict[el]}
         return new_dict
 
-    def getMinimizingCoefficients(self):
+    def getMinimizingPosteriorCoefficients(self):
         forest = self.initializeForest()
-        indicesTransformedForest = self.transformIndicesOfTreesInForest(forest)
+        indicesTransformedForest = self.setRootTo0_0ForAllSubtrees(forest)
         new_coeffs = self.runBesovTreeAlgorithmPerTree(indicesTransformedForest)
-        invertedIndicesForest = self.inverseTransformIndicesOfTreesInForest(new_coeffs)
+        invertedIndicesForest = self.unsetRootFrom0_0ForAllSubtrees(new_coeffs)
         flattenedForest = self.flattenDict(invertedIndicesForest)
         return flattenedForest
