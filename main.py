@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 import WaveletTransform.WaveletTransformer as wt
 import Tree.BesovTree as bt
 import math
+from pydub import AudioSegment
+from tempfile import mktemp
+from scipy.io import wavfile
+
 
 def sinus_plot():
     t = np.linspace(0, 2 * np.pi, 2 ** 9)
@@ -46,5 +50,23 @@ def analyse_different_values_of_beta():
     plt.legend()
     plt.show()
 if __name__ == "__main__":
-    sinus_plot()
-    # analyse_different_values_of_beta()
+    mp3_audio = AudioSegment.from_file('how_you_doing.mp3', format="mp3")  # read mp3
+    wname = mktemp('.wav')  # use temporary file
+    mp3_audio.export(wname, format="wav")  # convert to wav
+    FS, data = wavfile.read(wname)  # read wav file
+    length = data.shape[0] / FS
+    time = np.linspace(0., length, data.shape[0])
+
+    data_w_noise = data + np.random.normal(0,1,len(data))
+    # left_signal = data[:,0]
+    beta_vals = [0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.9]
+    for beta in beta_vals:
+        hsm, sound_waveletcoeffs = wt.getWaveletCoefficients(data_w_noise,"haar")
+        besov_tree = bt.BesovTree(sound_waveletcoeffs,beta)
+        transform_coeff = besov_tree.getMinimizingPosteriorCoefficients()
+        transformed_signal = wt.inverseDWT((hsm, transform_coeff), "haar")
+        transformed_signal_cut = transformed_signal[0:len(data)]
+        print(transformed_signal_cut)
+
+        print(sum( (data - transformed_signal_cut)**2 ))
+        wavfile.write(f"how_you_doing_transformed_beta_{beta}.wav",FS, np.asarray(transformed_signal_cut))

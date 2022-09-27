@@ -25,6 +25,7 @@ low_ans = calc_low_pass_over_array(x)
 high_ans = calc_high_pass_over_array(x)
 
 
+z = getWaveletCoefficients(x,'db2')
 z = pywt.wavedec([el for el in range(1,33)], 'db2','per')
 hsm = z[0]
 hse = z[1:]
