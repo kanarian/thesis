@@ -1,28 +1,30 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import WaveletTransform.WaveletTransformer as wt
-import Tree.BesovTree as bt
+import Tree.BesovForest as bf
 import math
 
-def sinus_plot():
+def sinus_plot(wavelet="haar", mode="smooth"):
     t = np.linspace(0, 2 * np.pi, 2 ** 9)
     # y = np.sin(4*t)+np.cos(3*t) + np.random.random(2**9)
-    y = np.sin(t)
+    y = np.sin(4*t)+np.cos(3*t) + np.random.normal(0,0.3,size=2**9)
+    # y = np.sin(t)
     fig, axs = plt.subplots(3, 3, figsize=(20, 15))
-    fig.suptitle(f"Plot of sin(4t)+cos(3t) with noise level 0.3\nDifferent values for beta")
-    hsm, wave_coef = wt.getWaveletCoefficients(y, "db4")
-    beta_values = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    fig.suptitle(f"Besov Tree estimates based on {wavelet} wavelets plot of sin(4t)+cos(3t) with noise level 0.3\nDifferent values for beta")
+    hsm, wave_coef = wt.getWaveletCoefficients(y, wavelet, mode)
+    beta_values = [0.00000000001, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    # beta_values = [0.0000000001]
     for idx, beta in enumerate(beta_values):
-        besov_tree = bt.BesovTree(wave_coef, beta)
-        transform_coeff = besov_tree.getMinimizingPosteriorCoefficients()
-        transform_y = wt.inverseDWT((hsm, transform_coeff), "haar")
+        besov_forest = bf.BesovForest(wave_coef, beta)
+        transform_coeff = besov_forest.getMinimizingPosteriorCoefficients()
+        transform_y = wt.inverseDWT((hsm, transform_coeff), wavelet,mode)
         axs[math.floor(idx / 3), idx % 3].set_title("Beta = " + str(beta))
         axs[math.floor(idx / 3), idx % 3].plot(t, y, label="Original")
         axs[math.floor(idx / 3), idx % 3].plot(t, transform_y[0:len(y)], label=f"Haar wavelet transform beta={beta}")
     plt.legend()
     plt.show()
 
-def analyse_different_values_of_beta():
+def analyse_different_values_of_beta(wavelet="haar", mode="smooth"):
     t = np.linspace(0, 2 * np.pi, 2 ** 9)
 
     y_funcs = [np.sin(t), np.cos(t), np.sin(4*t)+np.sin(3*t),
@@ -34,9 +36,9 @@ def analyse_different_values_of_beta():
     for y,y_name in zip(y_funcs,y_names):
         beta_vals = np.linspace(0.01,0.99,100)
         number_of_zeroes = []
-        hsm, wave_coef = wt.getWaveletCoefficients(y, "haar")
+        hsm, wave_coef = wt.getWaveletCoefficients(y, wavelet,mode)
         for beta in beta_vals:
-            besov_tree = bt.BesovTree(wave_coef, beta)
+            besov_tree = bf.BesovForest(wave_coef, beta)
             transform_coeff = besov_tree.getMinimizingPosteriorCoefficients()
             number_of_zeroes.append(len([x for x in transform_coeff.values() if x == 0]) / 2**9)
         plt.plot(beta_vals,number_of_zeroes,label=y_name)
@@ -45,5 +47,6 @@ def analyse_different_values_of_beta():
     plt.xlabel("Beta")
     plt.legend()
     plt.show()
+
 if __name__ == "__main__":
-    print('hi')
+    sinus_plot("db4","per")

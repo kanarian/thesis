@@ -3,7 +3,6 @@ import queue
 import numpy as np
 import WaveletTransform.WaveletTransformer as wt
 import Tree.BesovForest as bf
-from ast import literal_eval as make_tuple
 
 def makePlotBasedOnWaveletCoefficients(waveletCoefficientsDict, beta, wavelet, smooth):
     dot = graphviz.Digraph('g',comment='Wavelet Coefficients')
@@ -21,14 +20,14 @@ def makePlotBasedOnWaveletCoefficients(waveletCoefficientsDict, beta, wavelet, s
             dot.edge(str(currKey), str((currKey[0] + 1, 2*currKey[1] + 1)))
     dot.render(f'plots/waveletCoefficients_{beta}_{wavelet}_{smooth}', view=False)
 
-wavelet="db4"
-mode="per"
-beta_vals = [0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.99]
-
-t = np.linspace(0, 2 * np.pi, 2 ** 9)
-y = np.sin(4*t)+np.cos(3*t) + np.random.random(2**9)
-hsm, wave_coef = wt.getWaveletCoefficients(y, wavelet, mode)
-for beta in beta_vals:
-    besov_forest = bf.BesovForest(wave_coef, beta)
-    transform_coeff = besov_forest.getMinimizingPosteriorCoefficients()
-    makePlotBasedOnWaveletCoefficients(transform_coeff,beta, wavelet, mode)
+# wavelet="db4"
+# mode="per"
+# beta_vals = [0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.99]
+#
+# t = np.linspace(0, 2 * np.pi, 2 ** 9)
+# y = np.sin(4*t)+np.cos(3*t) + np.random.random(2**9)
+# hsm, wave_coef = wt.getWaveletCoefficients(y, wavelet, mode)
+# for beta in beta_vals:
+#     besov_forest = bf.BesovForest(wave_coef, beta)
+#     transform_coeff = besov_forest.getMinimizingPosteriorCoefficients()
+#     makePlotBasedOnWaveletCoefficients(transform_coeff,beta, wavelet, mode)

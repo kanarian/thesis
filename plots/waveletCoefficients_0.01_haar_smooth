@@ -1,0 +1,11 @@
+// Wavelet Coefficients
+digraph g {
+	graph [label="Wavelet Coefficients for beta = 0.01 using haar wavelets and smooth extrapolation mode"]
+	"(0, 0)" [label="(0, 0): -2.82e-01"]
+	"(1, 0)" [label="(1, 0): -3.50e+00"]
+	"(2, 0)" [label="(2, 0): 1.29e+01"]
+	"(2, 1)" [label="(2, 1): 1.27e+01"]
+	"(0, 0)" -> "(1, 0)"
+	"(1, 0)" -> "(2, 0)"
+	"(1, 0)" -> "(2, 1)"
+}
