@@ -1,12 +1,12 @@
 // Wavelet Coefficients
 digraph g {
 	graph [label="Wavelet Coefficients for beta = 0.2 using db4 wavelets and per extrapolation mode"]
-	"(0, 0)" [label="(0, 0): 1.79e+00"]
-	"(0, 1)" [label="(0, 1): -3.44e+00"]
-	"(0, 2)" [label="(0, 2): 5.17e+00"]
-	"(0, 3)" [label="(0, 3): -6.58e+00"]
-	"(0, 4)" [label="(0, 4): 5.98e+00"]
-	"(0, 5)" [label="(0, 5): -3.74e+00"]
-	"(0, 6)" [label="(0, 6): 1.89e+00"]
-	"(0, 7)" [label="(0, 7): -2.05e-01"]
+	"(0, 0)" [label="(0, 0): 1.05e+00"]
+	"(0, 1)" [label="(0, 1): -3.03e+00"]
+	"(0, 2)" [label="(0, 2): 5.50e+00"]
+	"(0, 3)" [label="(0, 3): -6.67e+00"]
+	"(0, 4)" [label="(0, 4): 6.52e+00"]
+	"(0, 5)" [label="(0, 5): -4.32e+00"]
+	"(0, 6)" [label="(0, 6): 2.23e+00"]
+	"(0, 7)" [label="(0, 7): -8.95e-01"]
 }

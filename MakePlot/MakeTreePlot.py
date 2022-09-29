@@ -18,7 +18,7 @@ def makePlotBasedOnWaveletCoefficients(waveletCoefficientsDict, beta, wavelet, s
             dot.edge(str(currKey), str((currKey[0] + 1, 2*currKey[1])) )
         if (currKey[0]+1,2*currKey[1] + 1) in waveletCoefficientsDict and waveletCoefficientsDict[(currKey[0] + 1, 2*currKey[1] + 1)] != 0:
             dot.edge(str(currKey), str((currKey[0] + 1, 2*currKey[1] + 1)))
-    dot.render(f'plots/waveletCoefficients_{beta}_{wavelet}_{smooth}', view=False)
+    dot.render('waveletCoefficientsTemp', view=True)
 
 # wavelet="db4"
 # mode="per"

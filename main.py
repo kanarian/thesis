@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import WaveletTransform.WaveletTransformer as wt
 import Tree.BesovForest as bf
 import math
+from MakePlot.MakeTreePlot import makePlotBasedOnWaveletCoefficients
+import heapq
 
 def sinus_plot(wavelet="haar", mode="smooth"):
     t = np.linspace(0, 2 * np.pi, 2 ** 9)
@@ -48,5 +50,79 @@ def analyse_different_values_of_beta(wavelet="haar", mode="smooth"):
     plt.legend()
     plt.show()
 
+def plot_function(t, y, wavelet, mode, beta, giveTreePlot=False, title=""):
+    # fig.suptitle(f"Besov Tree estimates based on {wavelet} wavelets plot of sin(4t)+cos(3t) with noise level 0.3\nDifferent values for beta")
+    hsm, wave_coef = wt.getWaveletCoefficients(y, wavelet, mode)
+    besov_forest = bf.BesovForest(wave_coef, beta)
+    transform_coeff = besov_forest.getMinimizingPosteriorCoefficients()
+    transform_y = wt.inverseDWT((hsm, transform_coeff), wavelet,mode)
+    plt.plot(t, y, label="Original")
+    plt.title(title)
+    plt.plot(t, transform_y[0:len(y)], label=f"{wavelet} wavelet with mode {mode} transform beta={beta}")
+    plt.legend()
+    plt.show()
+    if giveTreePlot:
+        makePlotBasedOnWaveletCoefficients(transform_coeff, wavelet, mode, beta)
+
+
+def set_percentage_of_coefficients_to_zero(coefficients, percentage):
+    new_coefficients = coefficients.copy()
+    number_of_coefficients_to_set_to_zero = int(len(new_coefficients) * percentage)
+    coefficient_s_sorted_by_value = sorted(new_coefficients.items(), key=lambda x: abs(x[1]))
+    for i in range(number_of_coefficients_to_set_to_zero):
+        new_coefficients[coefficient_s_sorted_by_value[i][0]] = 0
+    return new_coefficients
+
+def set_percentage_of_coefficients_to_non_zero(coefficients, percentage):
+    new_coefficients = coefficients.copy()
+    number_of_coefficients_to_set_to_zero = len(coefficients) - int(len(new_coefficients) * percentage)
+    coefficient_s_sorted_by_value = sorted(new_coefficients.items(), key=lambda x: abs(x[1]))
+    for i in range(number_of_coefficients_to_set_to_zero):
+        new_coefficients[coefficient_s_sorted_by_value[i][0]] = 0
+    return new_coefficients
+
+def MSE_wavelet_dicts(dict1, dict2):
+    assert dict1.keys() == dict2.keys(), "The two dictionaries do not have the same keys"
+    sum = 0
+    for key in dict1.keys():
+        sum += (dict1[key] - dict2[key]) ** 2
+    return sum/len(dict1)
+
+def compare_MSE():
+    t = np.linspace(0, 2 * np.pi, 2 ** 9)
+    y_real = np.sin(4 * t) + np.cos(8 * t)
+    y = y_real + np.random.normal(0, 0.3, size=2 ** 9)
+    wavelet = "db2"
+    mode = "per"
+    hsm, wave_coef_real = wt.getWaveletCoefficients(y_real, wavelet, mode)
+    hsm, wave_coef = wt.getWaveletCoefficients(y, wavelet, mode)
+    mse_set_perc_to_zero = []
+    fig, axs = plt.subplots(1, 2, figsize=(10, 8), sharey=True)
+    fig.suptitle(
+        "MSE between original wavelet coefficients and wavelet coefficients\nFor sin(4t)+cos(8t) with noise level 0.3")
+
+    for i in np.arange(0, 1.01, 0.01):
+        new_coeffs = set_percentage_of_coefficients_to_non_zero(coefficients=wave_coef, percentage=i)
+        x = MSE_wavelet_dicts(wave_coef_real, new_coeffs)
+        mse_set_perc_to_zero.append(x)
+    axs[0].plot(np.arange(0, 1.01, 0.01), mse_set_perc_to_zero)
+    axs[0].set_title("Set smallest $i$ coeffs to zero")
+    axs[0].set_xlabel("Percentage of coefficients set to zero")
+    axs[0].set_yscale("log")
+    axs[0].set_ylabel("MSE")
+
+    mse_beta = []
+    beta_range = np.arange(0.01, 0.6, 0.001)
+    for i in beta_range:
+        besov_forest = bf.BesovForest(wave_coef, beta=i)
+        transform_coeff = besov_forest.getMinimizingPosteriorCoefficients()
+        x = MSE_wavelet_dicts(wave_coef_real, transform_coeff)
+        mse_beta.append(x)
+    axs[1].plot(beta_range, mse_beta)
+    axs[1].set_title("Beta $beta$ different values")
+    axs[1].set_xlabel("Beta")
+    fig.show()
+
+
 if __name__ == "__main__":
-    sinus_plot("db4","per")
+
