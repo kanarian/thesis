@@ -123,9 +123,3 @@ z = wt2d.inverse2DDWT((hsm, wave_levels), 'haar', "zero")
 
 # g = t_bt.getMinimizingPosteriorCoefficients()
 # inverse = wt2d.inverse2DDWT((hsm, g), 'haar',"per")
-
-# self.wavelet_dict = {(0, 0): {"cH": .2, "cV": .3, "cD": .4},
-#                         (1, 0): {"cH": 0, "cV": .3, "cD": .4},
-#                         (1, 1): {"cH": 0, "cV": .5, "cD": 0},
-#                         (1, 2): {"cH": .1, "cV": 3, "cD": .2},
-#                         (1, 3): {"cH": .1, "cV": .1, "cD": .1}}
