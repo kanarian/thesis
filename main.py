@@ -90,7 +90,8 @@ def MSE_wavelet_dicts(dict1, dict2):
 
 def compare_MSE():
     t = np.linspace(0, 2 * np.pi, 2 ** 9)
-    y_real = np.sin(4 * t) + np.cos(8 * t)
+    y_real = 1/(t+1)
+    # y_real = np.sin(4 * t) + np.cos(8 * t)
     y = y_real + np.random.normal(0, 0.3, size=2 ** 9)
     wavelet = "db2"
     mode = "per"
@@ -124,5 +125,66 @@ def compare_MSE():
     fig.show()
 
 
-if __name__ == "__main__":
+def compare_MSE_given_wavelet_coeffs(wave_coef,wave_coef_real):
+    mse_set_perc_to_zero = []
+    fig, axs = plt.subplots(1, 2, figsize=(10, 8), sharey=True)
+    fig.suptitle(
+        "MSE between original wavelet coefficients and wavelet coefficients")
 
+    for i in np.arange(0, 1.01, 0.01):
+        new_coeffs = set_percentage_of_coefficients_to_non_zero(coefficients=wave_coef, percentage=i)
+        x = MSE_wavelet_dicts(wave_coef_real, new_coeffs)
+        mse_set_perc_to_zero.append(x)
+    axs[0].plot(np.arange(0, 1.01, 0.01), mse_set_perc_to_zero)
+    axs[0].set_title("Set smallest $i$ coeffs to zero")
+    axs[0].set_xlabel("Percentage of coefficients set to zero")
+    axs[0].set_yscale("log")
+    axs[0].set_ylabel("MSE")
+
+    mse_beta = []
+    beta_range = np.arange(0.01, 0.6, 0.001)
+    for i in beta_range:
+        besov_forest = bf.BesovForest(wave_coef, beta=i)
+        transform_coeff = besov_forest.getMinimizingPosteriorCoefficients()
+        x = MSE_wavelet_dicts(wave_coef_real, transform_coeff)
+        mse_beta.append(x)
+    axs[1].plot(beta_range, mse_beta)
+    axs[1].set_title("Beta $beta$ different values")
+    axs[1].set_xlabel("Beta")
+    fig.show()
+
+def tree_bottom_analysis():
+    t = np.linspace(0, 2 * np.pi, 2 ** 9)
+    y_real = np.sin(4 * t) + np.cos(8 * t)
+    y = y_real + np.random.normal(0, 0.3, size=2 ** 9)
+    wavelet = "db2"
+    mode = "per"
+    hsm, wave_coef_real = wt.getWaveletCoefficients(y_real, wavelet, mode)
+    hsm, wave_coef = wt.getWaveletCoefficients(y, wavelet, mode)
+
+    new_coefficients = {}
+    coefficient_s_sorted_by_value = sorted(wave_coef.items(), key=lambda x: x[0][0])
+    for idx, coeff in enumerate(coefficient_s_sorted_by_value):
+        if coeff[0][0] != 6:
+            new_coefficients[coeff[0]] = 0
+        else:
+            new_coefficients[coeff[0]] = np.sin(coeff[0][1])
+
+    new_real_coefficients = {}
+    coefficient_s_sorted_by_value = sorted(wave_coef_real.items(), key=lambda x: x[0][0])
+    for idx, coeff in enumerate(coefficient_s_sorted_by_value):
+        if coeff[0][0] != 6:
+            new_real_coefficients[coeff[0]] = 0
+        else:
+            new_real_coefficients[coeff[0]] = coeff[1]
+
+    transform_y = wt.inverseDWT((hsm, new_coefficients), wavelet, mode)
+    transform_real_y = wt.inverseDWT((hsm, new_real_coefficients), wavelet, mode)
+    plt.plot(t, y, label="Original")
+    plt.plot(t, transform_real_y, label="Real")
+    plt.plot(t, transform_y[0:len(y)], label=f"{wavelet} wavelet with mode {mode} keeping only bottom of tree")
+    plt.legend()
+    plt.show()
+
+if __name__ == "__main__":
+    sinus_plot()
