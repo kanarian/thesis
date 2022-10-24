@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 
 
 img = Image.open("Koala.jpg").convert("L")
-a = np.asarray(img)
-hsm, wt = wt2d.get2DWaveletCoefficients(a, "db2")
+a = np.asarray(img)/255
+hsm, wt = wt2d.get2DWaveletCoefficients(a, "haar")
 
 cH_dict = {}
 cV_dict = {}
@@ -29,12 +29,18 @@ for idx, [name,dic] in enumerate(dicts):
         axs[idx].plot(len(dic[key])*[key], dic[key],'o',alpha=0.2)
 fig.show()
 
-# besov_tree = tbt.TwoDimBesovTree(wt, .002, 2)
-# new_coeffs = besov_tree.getMinimizingPosteriorCoefficients()
-# print(new_coeffs)
-#
-# new_img = wt2d.inverse2DDWT((hsm, new_coeffs), "haar", 3)
-#
-# print(f"mse {((a - new_img)**2.).mean(axis=None)}")
 
+# for i in range(1,9):
+#     tree = tbt.TwoDimBesovTree(wt, 0.499, i)
+#     new_coeffs = tree.getMinimizingPosteriorCoefficients()
+#     new_img = wt2d.inverse2DDWT((hsm, new_coeffs), "haar")*255
+#     print(f"mse {((a - new_img) ** 2.).mean(axis=None)}")
+#     Image.fromarray(new_img).show()
+# besov_tree = tbt.TwoDimBesovTree(wt, .01, 7)
+# new_coeffs = besov_tree.getMinimizingPosteriorCoefficients()
+# #
+# new_img = wt2d.inverse2DDWT((hsm, new_coeffs), "haar")
+# #
+# print(f"mse {((a - new_img)**2.).mean(axis=None)}")
+#
 # Image.fromarray(new_img).show()

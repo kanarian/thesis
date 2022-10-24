@@ -61,6 +61,7 @@ class TwoDimBesovTree:
         assert j + 1 <= self.max_depth, "Node on max_depth has no child"
         assert child_index in [0, 1, 2, 3], "child_index must be 0, 1, 2 or 3"
         s = self.getNumberOfNodesInSubtree(j + 1)
+        # print(s)
         j_c, k_c = self.getXthChildIndex(j, k, child_index)
 
         for detail in ["cH", "cV", "cD"]:
