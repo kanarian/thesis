@@ -5,6 +5,7 @@ import pywt
 import numpy as np
 import WaveletTransform.TwoDWaveletTransformer as wt2d
 from collections import defaultdict
+import copy
 
 
 
@@ -81,18 +82,27 @@ class TwoDimBesovTree:
             for k in range(0, 4 ** j - 1 + 1):
                 j_p, k_p = self.getParentIndex(j, k)
                 to_add = any([self.t[j, k, "cH"],self.t[j, k, "cV"],self.t[j, k, "cD"]])
+                # to_add = all([self.t[j, k, "cH"], self.t[j, k, "cV"], self.t[j, k, "cD"]])
+                # print(to_add)
                 t_tilde[(j, k)] = t_tilde[j_p, k_p] if to_add else 0
         return t_tilde
 
-    def getMinimizingCoefficients(self, t_tilde):
-        g = self.wavelet_coefficients.copy()
+    def copyWaveletCoefficientsZero(self):
+        g = copy.deepcopy(self.wavelet_coefficients)
+        for keys in g.keys():
+            for detail in ["cH", "cV", "cD"]:
+                g[keys][detail] = 0
+        return g
 
+
+    def getMinimizingCoefficients(self, t_tilde):
+        g = self.copyWaveletCoefficientsZero()
         for j in range(0, self.max_depth + 1):
             for k in range(0, 4 ** j - 1 + 1):
                 if abs(t_tilde[j, k] - 1) < 1e-10:
                     for detail in ["cH", "cV", "cD"]:
-                        # g[j, k][detail] = self.wavelet_coefficients[j, k][detail]*.5
-                        g[j, k][detail] = self.wavelet_coefficients[j, k][detail]
+                        g[j, k][detail] = self.wavelet_coefficients[j, k][detail]*.5
+                        # g[j, k][detail] = self.wavelet_coefficients[j, k][detail]
                 elif abs(t_tilde[j, k] - 1) > 1e-10:
                     for detail in ["cH", "cV", "cD"]:
                         g[j,k][detail] = 0
@@ -105,7 +115,7 @@ class TwoDimBesovTree:
         while j >= 0:
             for k in range(0, 4 ** j):
                 for detail in ["cH", "cV", "cD"]:
-                    self.F[j, k, detail] = self.calcF(j, k,detail)
+                    self.F[j, k, detail] = self.calcF(j, k, detail)
                 self.considerSubTree(j, k, 0)
                 self.considerSubTree(j, k, 1)
                 self.considerSubTree(j, k, 2)
@@ -117,10 +127,10 @@ class TwoDimBesovTree:
         return g
 
 
-x = np.arange(16*16*16*16).reshape((16*16, 16*16))
+# x = np.arange(16*16*16*16).reshape((16*16, 16*16))
 # x = np.arange(8*8).reshape((8, 8))
-[hsm, wave_levels] = wt2d.get2DWaveletCoefficients(x, 'haar',"zero")
-z = wt2d.inverse2DDWT((hsm, wave_levels), 'haar', "zero")
+# [hsm, wave_levels] = wt2d.get2DWaveletCoefficients(x, 'haar',"zero")
+# z = wt2d.inverse2DDWT((hsm, wave_levels), 'haar', "zero")
 
 # g = t_bt.getMinimizingPosteriorCoefficients()
 # inverse = wt2d.inverse2DDWT((hsm, g), 'haar',"per")

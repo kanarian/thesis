@@ -71,8 +71,8 @@ class BesovTree:
         for j in range(0, self.j_max + 1):
             for k in range(0, 2 ** j - 1 + 1):
                 if abs(t_tilde[j, k] - 1) < 1e-10:
-                    # g[j,k] = self.wavelet_coefficients[j,k]*.5
-                    g[j, k] = self.wavelet_coefficients[j, k]
+                    g[j,k] = self.wavelet_coefficients[j,k]*.5
+                    # g[j, k] = self.wavelet_coefficients[j, k]
                 else:
                     g[j, k] = 0
         return g
