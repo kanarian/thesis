@@ -1,0 +1,89 @@
+from dataclasses import dataclass
+from Tree.BesovTree import BesovTree
+from PIL import Image
+import numpy as np
+import WaveletTransform.TwoDWaveletTransformer as wt2d
+import Tree.TwoDimBesovTree as tbt
+import matplotlib.pyplot as plt
+import pywt
+
+@dataclass
+class TwoDimBesovForest:
+    """"One or multiple Two Dim Besov Trees"""
+    wavelet_coefficients: dict
+    beta: float
+    max_level: int
+
+    def initializeForest(self):
+        forest = {}
+        for i in self.wavelet_coefficients:
+            # all nodes in the first level are the root of a subtree
+            if i[0] == 0:
+                forest[i[1]] = {i: self.wavelet_coefficients[i]}
+            # not first level
+            else:
+                # one of the trees in forest should contain the parent
+                for j in forest:
+                    if (i[0] - 1, i[1] // 4) in forest[j]:
+                        forest[j][i] = self.wavelet_coefficients[i]
+                        break
+        return forest
+
+    # This function causes all elements of the forest to be rooted at (0,0), thereby setting all
+    # subnodes to the usual conventions wrt parent-children indexing
+    def setRootTo0_0ForAllSubtrees(self, forest):
+        forestCorrectedRoots = {}
+        for el in forest:
+            subTree = forest[el]
+            newSubtree = {}
+            for index in subTree:
+                new_index = index[1] - 4 ** (index[0]) * el
+                newSubtree[(index[0], new_index)] = subTree[index]
+            forestCorrectedRoots[el] = newSubtree
+        return forestCorrectedRoots
+
+    def unsetRootFrom0_0ForAllSubtrees(self, forest):
+        invertedForest = {}
+        for el in forest:
+            subTree = forest[el]
+            newSubtree = {}
+            for index in subTree:
+                new_index = index[1] + 4 ** (index[0]) * el
+                newSubtree[(index[0], new_index)] = subTree[index]
+            invertedForest[el] = newSubtree
+        return invertedForest
+
+    def runTwoDimBesovTreeAlgorithmPerTree(self,forest):
+        new_coeffs = {}
+        for el in forest:
+            subTree = forest[el]
+            subBesovTree = tbt.TwoDimBesovTree(subTree, self.beta, self.max_level)
+            thisCoefficients = subBesovTree.getMinimizingPosteriorCoefficients()
+            new_coeffs[el] = thisCoefficients
+        return new_coeffs
+
+    def flattenDict(self, dict):
+        new_dict = {}
+        for el in dict:
+            new_dict = {**new_dict, **dict[el]}
+        return new_dict
+
+    def getMinimizingPosteriorCoefficients(self):
+        forest = self.initializeForest()
+        indicesTransformedForest = self.setRootTo0_0ForAllSubtrees(forest)
+        new_coeffs = self.runTwoDimBesovTreeAlgorithmPerTree(indicesTransformedForest)
+        invertedIndicesForest = self.unsetRootFrom0_0ForAllSubtrees(new_coeffs)
+        flattenedForest = self.flattenDict(invertedIndicesForest)
+        return flattenedForest
+
+
+img = Image.open("../Koala.jpg").convert("L")
+a = np.asarray(img)/255
+a_err = a + np.random.normal(0, 0.05, a.shape)
+Image.fromarray(a_err*255).show()
+
+hsm, wt = wt2d.get2DWaveletCoefficients(a_err, "db2","per")
+g = TwoDimBesovForest(wt, 0.499, 6).getMinimizingPosteriorCoefficients()
+
+inverse = wt2d.inverse2DDWT([hsm, g], "db2", "per")
+Image.fromarray(inverse*255).show()

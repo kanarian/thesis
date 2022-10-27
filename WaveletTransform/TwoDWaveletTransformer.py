@@ -16,35 +16,29 @@ def get2DWaveletCoefficients(signal, wavelet="haar", mode="smooth"):
 def inverse2DDWT(coeffs, wavelet="haar", mode="smooth"):
     hsm, wave_dict = coeffs
     wave_levels = []
-    number_of_roots = len(hsm)
-    nodes_per_tree = len(wave_dict) / number_of_roots
-
+    number_of_roots = len(hsm.flatten())
+    dim_of_root = hsm.shape[0]
+    nodes_per_tree = (len(wave_dict) + number_of_roots) / (number_of_roots)
     # The number of nodes in a quad-tree of depth n is:
     # 1 + 4 + 4^2 + ... + 4^n = ( 4^(n+1) - 1 ) / 3
     # Thus the number of levels is log_4(number_of_nodes + 1)
     number_of_levels = int(math.log((3 * nodes_per_tree + 1), 4))
-    for level_number in range(0, number_of_levels):
-        level_number_of_elements = len(hsm) * 2 ** level_number
-        level = [None]*level_number_of_elements
-        wave_levels.append(level)
 
     # This sort step is actually not needed, as the wavelet coefficients are in the correct order
     # but we do is just to be safe
     sorted_wavedict = sorted(list(wave_dict.items()), key=lambda x: (x[0][0], x[0][1]))
-
     detail_levels = []
     prevStartIndex = 0
     for i in range(0, number_of_levels):
         startIndexThisLevel = prevStartIndex
-        endIndexThisLevel = startIndexThisLevel + 4**i
+        endIndexThisLevel = startIndexThisLevel + number_of_roots*4**i
 
         thisLevel = sorted_wavedict[startIndexThisLevel:endIndexThisLevel]
-        thisLevelDetail_cH = np.fromiter(map(lambda x: x[1]['cH'], thisLevel),dtype=float).reshape(2**i, 2**i)
-        thisLevelDetail_cV = np.fromiter(map(lambda x: x[1]['cV'], thisLevel),dtype=float).reshape(2**i, 2**i)
-        thisLevelDetail_cD = np.fromiter(map(lambda x: x[1]['cD'], thisLevel),dtype=float).reshape(2**i, 2**i)
+        thisLevelDetail_cH = np.fromiter(map(lambda x: x[1]['cH'], thisLevel),dtype=float).reshape(dim_of_root*2**i, dim_of_root*2**i)
+        thisLevelDetail_cV = np.fromiter(map(lambda x: x[1]['cV'], thisLevel),dtype=float).reshape(dim_of_root*2**i, dim_of_root*2**i)
+        thisLevelDetail_cD = np.fromiter(map(lambda x: x[1]['cD'], thisLevel),dtype=float).reshape(dim_of_root*2**i, dim_of_root*2**i)
         detail_level = ([thisLevelDetail_cH, thisLevelDetail_cV, thisLevelDetail_cD])
         detail_levels.append(detail_level)
-
         prevStartIndex = endIndexThisLevel
 
     wave_levels = detail_levels

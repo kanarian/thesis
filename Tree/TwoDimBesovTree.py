@@ -101,8 +101,8 @@ class TwoDimBesovTree:
             for k in range(0, 4 ** j - 1 + 1):
                 if abs(t_tilde[j, k] - 1) < 1e-10:
                     for detail in ["cH", "cV", "cD"]:
-                        g[j, k][detail] = self.wavelet_coefficients[j, k][detail]*.5
-                        # g[j, k][detail] = self.wavelet_coefficients[j, k][detail]
+                        # g[j, k][detail] = self.wavelet_coefficients[j, k][detail]*.5
+                        g[j, k][detail] = self.wavelet_coefficients[j, k][detail]
                 elif abs(t_tilde[j, k] - 1) > 1e-10:
                     for detail in ["cH", "cV", "cD"]:
                         g[j,k][detail] = 0
