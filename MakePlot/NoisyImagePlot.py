@@ -31,8 +31,6 @@ def findMSEBetaValue(beta, wt, hsm, y, saveImg=False, savePath=None):
         arrayToImage(new_img).convert("L").save(savePath)
     return mse
 
-
-
 def analysis(beta_values, img_path):
     y = imageToArray(img_path)
     y_noise = y + np.random.normal(0, 0.12, y.shape)
