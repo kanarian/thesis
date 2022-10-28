@@ -6,6 +6,7 @@ import WaveletTransform.TwoDWaveletTransformer as wt2d
 import Tree.TwoDimBesovTree as tbt
 import matplotlib.pyplot as plt
 import pywt
+import math
 
 @dataclass
 class TwoDimBesovForest:
@@ -13,6 +14,7 @@ class TwoDimBesovForest:
     wavelet_coefficients: dict
     beta: float
     max_level: int
+    start_level: int = 0
 
     def initializeForest(self):
         forest = {}
@@ -57,7 +59,7 @@ class TwoDimBesovForest:
         new_coeffs = {}
         for el in forest:
             subTree = forest[el]
-            subBesovTree = tbt.TwoDimBesovTree(subTree, self.beta, self.max_level)
+            subBesovTree = tbt.TwoDimBesovTree(subTree, self.beta, self.max_level, start_level=self.start_level)
             thisCoefficients = subBesovTree.getMinimizingPosteriorCoefficients()
             new_coeffs[el] = thisCoefficients
         return new_coeffs
@@ -75,15 +77,3 @@ class TwoDimBesovForest:
         invertedIndicesForest = self.unsetRootFrom0_0ForAllSubtrees(new_coeffs)
         flattenedForest = self.flattenDict(invertedIndicesForest)
         return flattenedForest
-
-
-img = Image.open("../Koala.jpg").convert("L")
-a = np.asarray(img)/255
-a_err = a + np.random.normal(0, 0.05, a.shape)
-Image.fromarray(a_err*255).show()
-
-hsm, wt = wt2d.get2DWaveletCoefficients(a_err, "db2","per")
-g = TwoDimBesovForest(wt, 0.499, 6).getMinimizingPosteriorCoefficients()
-
-inverse = wt2d.inverse2DDWT([hsm, g], "db2", "per")
-Image.fromarray(inverse*255).show()

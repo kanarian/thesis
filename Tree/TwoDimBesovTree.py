@@ -15,6 +15,7 @@ class TwoDimBesovTree:
     wavelet_coefficients: dict
     beta: float
     max_depth: int
+    start_level: int = 0
 
     def __post_init__(self):
         # self.j_max = self.getMaxDepth()
@@ -22,7 +23,7 @@ class TwoDimBesovTree:
         self.F = {}
 
     def getParentIndex(self, j, k):
-        assert j > 0, f"Node on level {j} has no parent"
+        assert j > self.start_level, f"Node on level {j} has no parent"
         return j - 1, math.floor(k / 4)
 
     def getXthChildIndex(self, j, k, i):
@@ -77,8 +78,10 @@ class TwoDimBesovTree:
     def createConnectedTree(self):
         t_tilde = {}
 
-        t_tilde[(0, 0)] = 1
-        for j in range(1, self.max_depth + 1):
+        for j in range(0, self.start_level + 1):
+            for k in range(0, 4 ** j - 1 + 1):
+                t_tilde[j, k] = 1
+        for j in range(self.start_level + 1, self.max_depth + 1):
             for k in range(0, 4 ** j - 1 + 1):
                 j_p, k_p = self.getParentIndex(j, k)
                 to_add = any([self.t[j, k, "cH"],self.t[j, k, "cV"],self.t[j, k, "cD"]])
@@ -125,12 +128,3 @@ class TwoDimBesovTree:
         t_tilde = self.createConnectedTree()
         g = self.getMinimizingCoefficients(t_tilde)
         return g
-
-
-# x = np.arange(16*16*16*16).reshape((16*16, 16*16))
-# x = np.arange(8*8).reshape((8, 8))
-# [hsm, wave_levels] = wt2d.get2DWaveletCoefficients(x, 'haar',"zero")
-# z = wt2d.inverse2DDWT((hsm, wave_levels), 'haar', "zero")
-
-# g = t_bt.getMinimizingPosteriorCoefficients()
-# inverse = wt2d.inverse2DDWT((hsm, g), 'haar',"per")
