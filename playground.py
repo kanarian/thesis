@@ -22,27 +22,6 @@ a = np.asarray(img)/255
 a_err = a + np.random.normal(0, 0.2, a.shape)
 hsm, wt = wt2d.get2DWaveletCoefficients(a_err, "haar")
 
-# cH_dict = {}
-# cV_dict = {}
-# cD_dict = {}
-# for item in wt.items():
-#     cH_dict[item[0][0]] = cH_dict.setdefault(item[0][0], []) + [item[1]["cH"]]
-#     cV_dict[item[0][0]] = cV_dict.setdefault(item[0][0], []) + [item[1]["cV"]]
-#     cD_dict[item[0][0]] = cD_dict.setdefault(item[0][0], []) + [item[1]["cD"]]
-#
-# print(cH_dict.keys())
-# dicts = [["cH", cH_dict], ["cV",cV_dict], ["cD",cD_dict]]
-# fig, axs = plt.subplots(1, 3, figsize=(15,5), sharey='all')
-# for idx, [name,dic] in enumerate(dicts):
-#     for key in dic.keys():
-#         axs[idx].set_title(f"values of {name} on different levels")
-#         axs[idx].set_yscale("log")
-#         axs[idx].set_xlabel("level")
-#         axs[idx].set_ylabel("value (logscaled)")
-#         axs[idx].plot(len(dic[key])*[key], dic[key],'o',alpha=0.2)
-# fig.show()
-
-
 
 beta_values = [0.1,0.2,0.3,0.4,0.45,0.475,0.49,0.51,0.55,0.60]
 mses = []
