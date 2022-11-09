@@ -6,7 +6,7 @@ from PIL import Image
 import numpy as np
 
 
-wavelet = "db8"
+wavelet = "db2"
 mode = "per"
 start_level=3
 max_level = 5
@@ -49,7 +49,7 @@ fig = go.Figure(
 )
 
 fig.update_layout(margin = dict(t=50, l=25, r=25, b=25))
-# fig.show()
+fig.show()
 
 inverse = wt2d.inverse2DDWT([hsm, hde], wavelet, mode)
 Image.fromarray((inverse*255).astype(np.uint8)).show()
