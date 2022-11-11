@@ -1,3 +1,5 @@
+import dash
+
 import WaveletTransform.TwoDWaveletTransformer as wt2d
 import Tree.TwoDimBesovForest as tbf
 from dash import Dash, html, dcc,Input, Output, State
@@ -6,6 +8,8 @@ from copy import deepcopy
 import numpy as np
 import json
 import pywt
+import base64
+from io import BytesIO
 
 app = Dash(__name__)
 
@@ -15,6 +19,23 @@ wavelist = pywt.wavelist(kind="discrete")
 for el in wavelist:
     thisWavelet = pywt.Wavelet(el)
     possible_waves.append({"code": el, "name":f"{thisWavelet.family_name}-{thisWavelet.dec_len}"})
+
+def image_decode(content):
+    content_type, content_string = content.split(',')
+    # im_b64 = base64.b64encode(content_string)
+    im_bytes = base64.b64decode(content_string)
+    im_file = BytesIO(im_bytes)
+    return im_file
+
+def load_and_preprocess(content):
+    image = image_decode(content)
+    image1 = Image.open(image)
+    rgb = Image.new('RGB', image1.size)
+    rgb.paste(image1)
+    image = rgb
+    test_image = image.resize((512,512))
+    return test_image
+
 
 def image_noise_form():
     return html.Div([
@@ -69,13 +90,21 @@ def show_image_noise_form(data):
 
 @app.callback(
     Output("image-store", "data"),
-    Input("test-image-dropdown", "value"))
-def load_test_image(image_path):
-    if image_path == "":
-        return None
-    img = Image.open(image_path).convert("RGB")
-    imgStore = {"image": np.array(img).tolist()}
-    return json.dumps(imgStore)
+    [Input("test-image-dropdown", "value"),
+     Input("upload-image", "contents")])
+def load_test_image(image_path, contents):
+    if dash.callback_context.triggered_id == "test-image-dropdown":
+        if image_path == "":
+            return None
+        img = Image.open(image_path).convert("RGB")
+        imgStore = {"image": np.array(img).tolist()}
+        return json.dumps(imgStore)
+    elif dash.callback_context.triggered_id == "upload-image":
+        if contents is not None:
+            image = load_and_preprocess(contents)
+            imgStoreObj = {"image": np.array(image).tolist()}
+            return json.dumps(imgStoreObj)
+
 
 @app.callback(
     Output("original-image-div", "children"),
