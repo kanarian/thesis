@@ -1,190 +1,260 @@
+import dash
+
+import WaveletTransform.TwoDWaveletTransformer as wt2d
+import Tree.TwoDimBesovForest as tbf
+from dash import Dash, html, dcc,Input, Output, State
+from PIL import Image
+from copy import deepcopy
 import numpy as np
-import matplotlib.pyplot as plt
-import WaveletTransform.WaveletTransformer as wt
-import Tree.BesovForest as bf
-import math
-from MakePlot.MakeTreePlot import makePlotBasedOnWaveletCoefficients
-import heapq
+import json
+import pywt
+import base64
+from io import BytesIO
 
-def sinus_plot(wavelet="haar", mode="smooth"):
-    t = np.linspace(0, 2 * np.pi, 2 ** 9)
-    # y = np.sin(4*t)+np.cos(3*t) + np.random.random(2**9)
-    y = np.sin(4*t)+np.cos(3*t) + np.random.normal(0,0.3,size=2**9)
-    # y = np.sin(t)
-    fig, axs = plt.subplots(3, 3, figsize=(20, 15))
-    fig.suptitle(f"Besov Tree estimates based on {wavelet} wavelets plot of sin(4t)+cos(3t) with noise level 0.3\nDifferent values for beta")
-    hsm, wave_coef = wt.getWaveletCoefficients(y, wavelet, mode)
-    beta_values = [0.00000000001, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-    # beta_values = [0.0000000001]
-    for idx, beta in enumerate(beta_values):
-        besov_forest = bf.BesovForest(wave_coef, beta)
-        transform_coeff = besov_forest.getMinimizingPosteriorCoefficients()
-        transform_y = wt.inverseDWT((hsm, transform_coeff), wavelet,mode)
-        axs[math.floor(idx / 3), idx % 3].set_title("Beta = " + str(beta))
-        axs[math.floor(idx / 3), idx % 3].plot(t, y, label="Original")
-        axs[math.floor(idx / 3), idx % 3].plot(t, transform_y[0:len(y)], label=f"Haar wavelet transform beta={beta}")
-    plt.legend()
-    plt.show()
+app = Dash(__name__)
+server = app.server
 
-def analyse_different_values_of_beta(wavelet="haar", mode="smooth"):
-    t = np.linspace(0, 2 * np.pi, 2 ** 9)
+z = pywt.families()
+possible_waves = []
+wavelist = pywt.wavelist(kind="discrete")
+for el in wavelist:
+    thisWavelet = pywt.Wavelet(el)
+    possible_waves.append({"code": el, "name":f"{thisWavelet.family_name}-{thisWavelet.dec_len}"})
 
-    y_funcs = [np.sin(t), np.cos(t), np.sin(4*t)+np.sin(3*t),
-               np.sin(4*t)+np.cos(3*t) + np.random.normal(0,0.3,size=2**9)
-               ,np.sin(4*t)+np.cos(3*t) + np.random.normal(0,0.6,size=2**9),
-               np.sin(4*t)+np.cos(3*t) + np.random.normal(0,0.9,size=2**9)]
-    y_names = ["sin(t)","cos(t)","sin(4t)+sin(3t)","sin(4t)+cos(3t) + 0.3*N(0,1)","sin(4t)+cos(3t) + 0.6*N(0,1)","sin(4t)+cos(3t) + 0.9*N(0,1)"]
+def image_decode(content):
+    content_type, content_string = content.split(',')
+    # im_b64 = base64.b64encode(content_string)
+    im_bytes = base64.b64decode(content_string)
+    im_file = BytesIO(im_bytes)
+    return im_file
 
-    for y,y_name in zip(y_funcs,y_names):
-        beta_vals = np.linspace(0.01,0.99,100)
-        number_of_zeroes = []
-        hsm, wave_coef = wt.getWaveletCoefficients(y, wavelet,mode)
-        for beta in beta_vals:
-            besov_tree = bf.BesovForest(wave_coef, beta)
-            transform_coeff = besov_tree.getMinimizingPosteriorCoefficients()
-            number_of_zeroes.append(len([x for x in transform_coeff.values() if x == 0]) / 2**9)
-        plt.plot(beta_vals,number_of_zeroes,label=y_name)
-    plt.title("Haar-based Besov trees: percentage of zero coefficients\nin the wavelet coefficients as a function of beta")
-    plt.ylabel("Percentage of zeroe coefficients")
-    plt.xlabel("Beta")
-    plt.legend()
-    plt.show()
-
-def plot_function(t, y, wavelet, mode, beta, giveTreePlot=False, title=""):
-    # fig.suptitle(f"Besov Tree estimates based on {wavelet} wavelets plot of sin(4t)+cos(3t) with noise level 0.3\nDifferent values for beta")
-    hsm, wave_coef = wt.getWaveletCoefficients(y, wavelet, mode)
-    besov_forest = bf.BesovForest(wave_coef, beta)
-    transform_coeff = besov_forest.getMinimizingPosteriorCoefficients()
-    transform_y = wt.inverseDWT((hsm, transform_coeff), wavelet,mode)
-    plt.plot(t, y, label="Original")
-    plt.title(title)
-    plt.plot(t, transform_y[0:len(y)], label=f"{wavelet} wavelet with mode {mode} transform beta={beta}")
-    plt.legend()
-    plt.show()
-    if giveTreePlot:
-        makePlotBasedOnWaveletCoefficients(transform_coeff, wavelet, mode, beta)
+def load_and_preprocess(content):
+    image = image_decode(content)
+    image1 = Image.open(image)
+    rgb = Image.new('RGB', image1.size)
+    rgb.paste(image1)
+    image = rgb
+    test_image = image.resize((512,512))
+    return test_image
 
 
-def set_percentage_of_coefficients_to_zero(coefficients, percentage):
-    new_coefficients = coefficients.copy()
-    number_of_coefficients_to_set_to_zero = int(len(new_coefficients) * percentage)
-    coefficient_s_sorted_by_value = sorted(new_coefficients.items(), key=lambda x: abs(x[1]))
-    for i in range(number_of_coefficients_to_set_to_zero):
-        new_coefficients[coefficient_s_sorted_by_value[i][0]] = 0
-    return new_coefficients
+def image_noise_form():
+    return html.Div([
+        html.H3("Noisy grescaled image"),
+        html.Div(id='noisy-generated-image'),
+        dcc.Input(id='noise', type='number', value=0.1, min=0, max=1, step=0.01),
+        html.Button(id='submit-val', type="submit", children="Submit", n_clicks=0),
+    ],id="image-noise-form")
 
-def set_percentage_of_coefficients_to_non_zero(coefficients, percentage):
-    new_coefficients = coefficients.copy()
-    number_of_coefficients_to_set_to_zero = len(coefficients) - int(len(new_coefficients) * percentage)
-    coefficient_s_sorted_by_value = sorted(new_coefficients.items(), key=lambda x: abs(x[1]))
-    for i in range(number_of_coefficients_to_set_to_zero):
-        new_coefficients[coefficient_s_sorted_by_value[i][0]] = 0
-    return new_coefficients
+def wavelet_form():
+    return html.Div([
+    html.Div(["Select a wavelet:", dcc.Dropdown(
+        [val['name'] for val in possible_waves],"Haar-2",id="wavelet-dropdown")]),
+    html.Div(["Select a mode:", dcc.Dropdown(
+        ["Periodic","Symmetric","Smooth"],"Periodic",id="mode-dropdown")]),
+    html.Div(["Select beta", dcc.Input(id="beta-input", type="number", min=0.0000000001, max=0.9999999999, step=0.0000000001, value=0.5)]),
+    html.Div(["Select start level", dcc.Input(id="start-level-input", type="number", min=0, max=10, step=1, value=3)]),
+    html.Div(["Select max level", dcc.Input(id="max-level-input", type="number", min=0, max=10, step=1, value=5)]),
+    html.Button(id='submit-wavelet', type="submit", children="Submit", n_clicks=0),
+    ], id="wavelet-form")
 
-def MSE_wavelet_dicts(dict1, dict2):
-    assert dict1.keys() == dict2.keys(), "The two dictionaries do not have the same keys"
-    sum = 0
-    for key in dict1.keys():
-        sum += (dict1[key] - dict2[key]) ** 2
-    return sum/len(dict1)
+app.layout = html.Div(children=[
+    html.H1(children='Two-Dimensional Besov Tree Wavelet Denoising'),
+    html.Div([html.H3("Upload your own image or select a test image"),
+             dcc.Dropdown(options={"cloud_dalle.png" : "Dall-E generated Cloud", "Koala.jpg" : "Koala"},value="", id="test-image-dropdown"),
+             dcc.Upload(id='upload-image',
+                        children=html.Div(['Drag and Drop or ', html.A('Select Files')]),
+                     style={'cursor': 'pointer','width': '100%', 'height': '60px', 'lineHeight': '60px', 'borderWidth': '1px', 'borderStyle': 'dashed', 'borderRadius': '5px', 'textAlign': 'center', 'margin': '10px'}),
+             ]),
+    html.Div([
+        html.Div(id="original-image-div"),
+        html.Div(id="greyscale-image-div"),
+        image_noise_form(),
+        ],
+    style={'display': 'flex', "gap": "20px"}),
+    wavelet_form(),
+    dcc.Store(id="image-store"),
+    dcc.Store(id="noisy-img-store"),
+    dcc.Store(id="wavelet-transform-store"),
+    html.Div(id='wavelet-transform-container'),
+])
 
-def compare_MSE():
-    t = np.linspace(0, 2 * np.pi, 2 ** 9)
-    y_real = 1/(t+1)
-    # y_real = np.sin(4 * t) + np.cos(8 * t)
-    y = y_real + np.random.normal(0, 0.3, size=2 ** 9)
-    wavelet = "db2"
-    mode = "per"
-    hsm, wave_coef_real = wt.getWaveletCoefficients(y_real, wavelet, mode)
-    hsm, wave_coef = wt.getWaveletCoefficients(y, wavelet, mode)
-    mse_set_perc_to_zero = []
-    fig, axs = plt.subplots(1, 2, figsize=(10, 8), sharey=True)
-    fig.suptitle(
-        "MSE between original wavelet coefficients and wavelet coefficients\nFor sin(4t)+cos(8t) with noise level 0.3")
+@app.callback(
+    Output("start-level-input", "max"),
+    Input("max-level-input", "value"))
+def set_maximum_on_allowed_start_level(max_level):
+    return max_level
 
-    for i in np.arange(0, 1.01, 0.01):
-        new_coeffs = set_percentage_of_coefficients_to_non_zero(coefficients=wave_coef, percentage=i)
-        x = MSE_wavelet_dicts(wave_coef_real, new_coeffs)
-        mse_set_perc_to_zero.append(x)
-    axs[0].plot(np.arange(0, 1.01, 0.01), mse_set_perc_to_zero)
-    axs[0].set_title("Set smallest $i$ coeffs to zero")
-    axs[0].set_xlabel("Percentage of coefficients set to zero")
-    axs[0].set_yscale("log")
-    axs[0].set_ylabel("MSE")
+@app.callback(
+    Output("max-level-input", "value"),
+    Input("max-level-input","max")
+)
+def set_to_new_max_level(max_level):
+    return max_level
 
-    mse_beta = []
-    beta_range = np.arange(0.01, 0.6, 0.001)
-    for i in beta_range:
-        besov_forest = bf.BesovForest(wave_coef, beta=i)
-        transform_coeff = besov_forest.getMinimizingPosteriorCoefficients()
-        x = MSE_wavelet_dicts(wave_coef_real, transform_coeff)
-        mse_beta.append(x)
-    axs[1].plot(beta_range, mse_beta)
-    axs[1].set_title("Beta $beta$ different values")
-    axs[1].set_xlabel("Beta")
-    fig.show()
+@app.callback(
+    Output("max-level-input", "max"),
+    Input("wavelet-dropdown", "value")
+)
+def update_max_level(wavelet):
+    [wavelet_fam, filter_len] = wavelet.split("-")
+    for wave in wavelist:
+        thisWavelet = pywt.Wavelet(wave)
+        if (thisWavelet.family_name == wavelet_fam) and (thisWavelet.dec_len == int(filter_len)):
+            # Note this 512 is hardcoded, if we change image size, then it will be wrong!
+            newMaxLevel = pywt.dwt_max_level(512, thisWavelet) - 1
+            return newMaxLevel
+
+@app.callback(
+    Output("image-noise-form", "style"),
+    Input("image-store", "data")
+)
+def show_image_noise_form(data):
+    if data is None:
+        return {"display": "none"}
+    else:
+        return {"display": "block"}
+
+@app.callback(
+    Output("image-store", "data"),
+    [Input("test-image-dropdown", "value"),
+     Input("upload-image", "contents")])
+def load_test_image(image_path, contents):
+    if dash.callback_context.triggered_id == "test-image-dropdown":
+        if image_path == "":
+            return None
+        img = Image.open(image_path).convert("RGB")
+        imgStore = {"image": np.array(img).tolist()}
+        return json.dumps(imgStore)
+    elif dash.callback_context.triggered_id == "upload-image":
+        if contents is not None:
+            image = load_and_preprocess(contents)
+            imgStoreObj = {"image": np.array(image).tolist()}
+            return json.dumps(imgStoreObj)
 
 
-def compare_MSE_given_wavelet_coeffs(wave_coef,wave_coef_real):
-    mse_set_perc_to_zero = []
-    fig, axs = plt.subplots(1, 2, figsize=(10, 8), sharey=True)
-    fig.suptitle(
-        "MSE between original wavelet coefficients and wavelet coefficients")
+@app.callback(
+    Output("original-image-div", "children"),
+    Input("image-store", "data"))
+def display_original_image(image_store):
+    if image_store is None:
+        return None
+    imgStore = json.loads(image_store)
+    img = Image.fromarray(np.array(imgStore["image"]).astype(np.uint8))
+    return html.Div([html.H3("Original img"), html.Img(src=img,height=300,width=300)])
 
-    for i in np.arange(0, 1.01, 0.01):
-        new_coeffs = set_percentage_of_coefficients_to_non_zero(coefficients=wave_coef, percentage=i)
-        x = MSE_wavelet_dicts(wave_coef_real, new_coeffs)
-        mse_set_perc_to_zero.append(x)
-    axs[0].plot(np.arange(0, 1.01, 0.01), mse_set_perc_to_zero)
-    axs[0].set_title("Set smallest $i$ coeffs to zero")
-    axs[0].set_xlabel("Percentage of coefficients set to zero")
-    axs[0].set_yscale("log")
-    axs[0].set_ylabel("MSE")
+@app.callback(
+    Output("greyscale-image-div", "children"),
+    Input("image-store", "data"))
+def display_original_image(image_store):
+    if image_store is None:
+        return None
+    imgStore = json.loads(image_store)
+    img = Image.fromarray(np.array(imgStore["image"]).astype(np.uint8)).convert("L")
+    return html.Div([html.H3("Greyscale img"), html.Img(src=img,height=300,width=300)])
 
-    mse_beta = []
-    beta_range = np.arange(0.01, 0.6, 0.001)
-    for i in beta_range:
-        besov_forest = bf.BesovForest(wave_coef, beta=i)
-        transform_coeff = besov_forest.getMinimizingPosteriorCoefficients()
-        x = MSE_wavelet_dicts(wave_coef_real, transform_coeff)
-        mse_beta.append(x)
-    axs[1].plot(beta_range, mse_beta)
-    axs[1].set_title("Beta $beta$ different values")
-    axs[1].set_xlabel("Beta")
-    fig.show()
 
-def tree_bottom_analysis():
-    t = np.linspace(0, 2 * np.pi, 2 ** 9)
-    y_real = np.sin(4 * t) + np.cos(8 * t)
-    y = y_real + np.random.normal(0, 0.3, size=2 ** 9)
-    wavelet = "db2"
-    mode = "per"
-    hsm, wave_coef_real = wt.getWaveletCoefficients(y_real, wavelet, mode)
-    hsm, wave_coef = wt.getWaveletCoefficients(y, wavelet, mode)
+@app.callback(
+    Output("mode-dropdown", "options"),
+    Input("wavelet-dropdown", "value"))
+def update_mode_dropdown(wavelet):
+    if wavelet == "Haar-2":
+        return ["Periodic", "Symmetric", "Smooth"]
+    else:
+        return ["Periodic"]
 
-    new_coefficients = {}
-    coefficient_s_sorted_by_value = sorted(wave_coef.items(), key=lambda x: x[0][0])
-    for idx, coeff in enumerate(coefficient_s_sorted_by_value):
-        if coeff[0][0] != 6:
-            new_coefficients[coeff[0]] = 0
-        else:
-            new_coefficients[coeff[0]] = np.sin(coeff[0][1])
 
-    new_real_coefficients = {}
-    coefficient_s_sorted_by_value = sorted(wave_coef_real.items(), key=lambda x: x[0][0])
-    for idx, coeff in enumerate(coefficient_s_sorted_by_value):
-        if coeff[0][0] != 6:
-            new_real_coefficients[coeff[0]] = 0
-        else:
-            new_real_coefficients[coeff[0]] = coeff[1]
+@app.callback(
+    Output(component_id="noisy-img-store", component_property="data"),
+    Input(component_id="submit-val", component_property="n_clicks"),
+    [State(component_id="noise", component_property="value"),
+     State(component_id="image-store", component_property="data")]
+)
+def update_noisy_img_store(n_clicks, noise, imgStoreData):
+    if imgStoreData is None:
+        return "Please select or upload an image"
+    if n_clicks == 0:
+        return "Update the noise value and click submit to see the noisy image"
+    imgStore = json.loads(imgStoreData)
+    img_arr = Image.fromarray(np.array(imgStore["image"]).astype(np.uint8)).convert("L")
+    copy_img = deepcopy(np.asarray(img_arr))/255
+    noise = np.random.normal(0, noise, copy_img.shape)
+    noisy_img_arr = (copy_img + noise)*255
+    to_show = {"noisy_img": noisy_img_arr.tolist(), "noise_added": True}
+    return json.dumps(to_show)
 
-    transform_y = wt.inverseDWT((hsm, new_coefficients), wavelet, mode)
-    transform_real_y = wt.inverseDWT((hsm, new_real_coefficients), wavelet, mode)
-    plt.plot(t, y, label="Original")
-    plt.plot(t, transform_real_y, label="Real")
-    plt.plot(t, transform_y[0:len(y)], label=f"{wavelet} wavelet with mode {mode} keeping only bottom of tree")
-    plt.legend()
-    plt.show()
+@app.callback(
+    Output(component_id="noisy-generated-image", component_property="children"),
+    Input(component_id="noisy-img-store", component_property="data"))
+def update_noisy_generated_image(data):
+    if "noisy_img" not in data:
+        return "Update the noise value and click submit to see the noisy image"
+    json_data = json.loads(data)
+    new_img = Image.fromarray(np.array(json_data["noisy_img"])).convert("L")
+    return html.Img(src=new_img, width=300, height=300)
 
-if __name__ == "__main__":
-    sinus_plot()
+@app.callback(
+    Output(component_id="wavelet-form", component_property="style"),
+    Input(component_id="noisy-img-store", component_property="data"))
+def update_wavelet_form(data):
+    if "noisy_img" not in data:
+        return {"display": "none"}
+    return {"display": "flex", "flex-direction": "column", "gap": "20px", "width": "24rem"}
+
+@app.callback(
+    Output(component_id="wavelet-transform-store", component_property="data"),
+    Input(component_id="submit-wavelet", component_property="n_clicks"),
+    [State(component_id="wavelet-dropdown", component_property="value"),
+     State(component_id="mode-dropdown", component_property="value"),
+     State(component_id="beta-input", component_property="value"),
+     State(component_id="start-level-input", component_property="value"),
+     State(component_id="max-level-input", component_property="value"),
+     State(component_id="noisy-img-store", component_property="data"),
+     State(component_id="wavelet-transform-store", component_property="data")],
+    prevent_initial_call=True)
+def update_wavelet_dropdown_output(n_clicks, wavelet, mode, beta, start_level, max_level, dataNoisyImg, dataWaveletTransformStore):
+    print("wavelet transform start")
+    wavelet = list(filter(lambda x: x["name"] == wavelet, possible_waves))[0]["code"]
+    mode_map = {"Periodic": "per", "Symmetric": "symm", "Smooth": "smooth"}
+    y_err = np.array(json.loads(dataNoisyImg)["noisy_img"])/255
+    hsm, hde = wt2d.get2DWaveletCoefficients(y_err, wavelet, mode_map[mode])
+    tbt = tbf.TwoDimBesovForest(hde, beta, start_level, max_level)
+    g = tbt.getMinimizingPosteriorCoefficients()
+    y = wt2d.inverse2DDWT([hsm, g], wavelet, mode_map[mode])
+    print("wavelet transform finish")
+    this_wt_data = {"recon_img" : y.tolist(), "wavelet_transform_params": {"wavelet": wavelet, "mode": mode, "beta": beta, "start_level": start_level, "max_level": max_level}}
+
+    if dataWaveletTransformStore is None:
+        return json.dumps([this_wt_data])
+
+    wt_data = json.loads(dataWaveletTransformStore)
+
+    new_wt_data = wt_data
+    new_wt_data.append(this_wt_data)
+
+    return json.dumps(new_wt_data)
+
+@app.callback(
+Output(component_id="wavelet-transform-container", component_property="children"),
+Input(component_id="wavelet-transform-store", component_property="data"))
+def update_wavelet_transform_container(data):
+    if data is None:
+        return ""
+    json_data = json.loads(data)
+    new_divs = []
+    for el in reversed(json_data):
+        if "recon_img" in el:
+            [wavelet, mode, beta, start_level, max_level] = [el["wavelet_transform_params"][key] for key in ["wavelet", "mode", "beta", "start_level", "max_level"]]
+            recon_img = Image.fromarray(np.array(el["recon_img"])*255).convert("L")
+            new_divs.append(html.Div([html.H3(f"w:{wavelet}-m:{mode}-b:{beta}-s:{start_level}-m:{max_level}"),html.Img(src=recon_img, width=300, height=300)]))
+    return new_divs
+
+    # if children == None:
+    #     return html.Div([html.H3("Reconstructed image"), html.Img(src=recon_img, width=300, height=300)])
+    # child_to_add = html.Div([html.H3(f"Reconstructed image {wavelet}-{mode}-{beta}-{start_level}-{max_level}"),
+    #                          html.Img(src=recon_img, width=300, height=300)])
+    # child_to_add_json = child_to_add.to_plotly_json()
+    # return
+
+if __name__ == '__main__':
+    app.run_server(host="0.0.0.0",port="8080",debug=True)

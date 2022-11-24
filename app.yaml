@@ -1,0 +1,19 @@
+service: default
+runtime: python310
+
+basic_scaling:
+    max_instances: 1
+    idle_timeout: 10m
+
+resources:
+    cpu: 1
+    memory_gb: 1
+    disk_size_gb: 10
+
+entrypoint: gunicorn -b 0.0.0.0:8080 main:server
+
+handlers:
+- url: /favicon\.ico
+  mime_type: image/png
+  static_files: favicon-32x32.png
+  upload: favicon-32x32.png
