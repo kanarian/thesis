@@ -1,11 +1,11 @@
 from dataclasses import dataclass
-from queue import Queue
 import math
 import pywt
 import numpy as np
 import WaveletTransform.TwoDWaveletTransformer as wt2d
+import WaveletTransform.TwoDWaveletTransformer as wt2d
 from collections import defaultdict
-
+from collections import deque
 
 @dataclass
 class TwoDimBesovTree:
@@ -14,7 +14,6 @@ class TwoDimBesovTree:
     beta: float
     max_depth: int
     start_level: int = 0
-    mForSubtreeCache = {}
     mForSubtreeAllDetailsCache = {}
 
     def __post_init__(self):
@@ -31,41 +30,18 @@ class TwoDimBesovTree:
         assert i >= 0 and i <= 3, "i must be between 0 and 3"
         return j + 1, 4 * k + i
 
-    def mForSubtree(self, j, k, detail):
-        assert detail in ["cH", "cV", "cD"], "detail must be one of cH, cV, cD"
-        sum = 0
-        if (j, k, detail) in self.mForSubtreeCache:
-            return self.mForSubtreeCache[j, k, detail]
-        thisQueue = Queue()
-        thisQueue.put((j, k))
-        while not thisQueue.empty():
-            thisSum = 0
-            currJ, currK = thisQueue.get()
-            if (currJ, currK, detail) in self.mForSubtreeCache:
-                sum += self.mForSubtreeCache[currJ, currK, detail]
-                continue
-            thisSum += abs(self.wavelet_coefficients[currJ, currK][detail])**2
-            self.mForSubtreeCache[currJ, currK, detail] = thisSum
-            sum += thisSum
-            # sum += abs(self.wavelet_coefficients[currJ, currK][detail])**2
-            if currJ + 1 <= self.max_depth:
-                for i in range(0, 4):
-                    thisQueue.put(self.getXthChildIndex(currJ, currK, i))
-        self.mForSubtreeCache[j, k, detail] = sum
-        return sum
-
     # should return {"cV":10, "cH": 10, "cD": 10}
     def mForSubtreeAllDetails(self, j, k):
         sum = {"cV": 0, "cH": 0, "cD": 0}
 
         if (j, k) in self.mForSubtreeAllDetailsCache:
             return self.mForSubtreeAllDetailsCache[j, k]
-        thisQueue = Queue()
-        thisQueue.put((j, k))
+        thisQueue = deque()
+        thisQueue.append((j, k))
 
-        while not thisQueue.empty():
+        while thisQueue:
             thisSum = {"cV": 0, "cH": 0, "cD": 0}
-            currJ, currK = thisQueue.get()
+            currJ, currK = thisQueue.pop()
             if (currJ, currK) in self.mForSubtreeAllDetailsCache:
                 sum["cV"] += self.mForSubtreeAllDetailsCache[currJ, currK]["cV"]
                 sum["cH"] += self.mForSubtreeAllDetailsCache[currJ, currK]["cH"]
@@ -83,7 +59,7 @@ class TwoDimBesovTree:
             if currJ + 1 <= self.max_depth:
                 for i in range(0, 4):
 
-                    thisQueue.put(self.getXthChildIndex(currJ, currK, i))
+                    thisQueue.append(self.getXthChildIndex(currJ, currK, i))
         self.mForSubtreeAllDetailsCache[j, k] = sum
         return sum
 
