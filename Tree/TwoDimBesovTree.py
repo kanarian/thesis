@@ -5,9 +5,6 @@ import pywt
 import numpy as np
 import WaveletTransform.TwoDWaveletTransformer as wt2d
 from collections import defaultdict
-import copy
-
-import pickle
 
 
 @dataclass
@@ -137,11 +134,9 @@ class TwoDimBesovTree:
         return t_tilde
 
     def copyWaveletCoefficientsZero(self):
-        g = pickle.loads(pickle.dumps(self.wavelet_coefficients,))
-        # g = copy.deepcopy(self.wavelet_coefficients)
-        for keys in g.keys():
-            for detail in ["cH", "cV", "cD"]:
-                g[keys][detail] = 0
+        g = {}
+        for key in self.wavelet_coefficients.keys():
+            g[key] = {"cH": 0, "cV": 0, "cD": 0}
         return g
 
 
