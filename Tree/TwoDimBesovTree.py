@@ -16,6 +16,7 @@ class TwoDimBesovTree:
     beta: float
     max_depth: int
     start_level: int = 0
+    mForSubtreeCache = {}
 
     def __post_init__(self):
         # self.j_max = self.getMaxDepth()
@@ -34,14 +35,24 @@ class TwoDimBesovTree:
     def mForSubtree(self, j, k, detail):
         assert detail in ["cH", "cV", "cD"], "detail must be one of cH, cV, cD"
         sum = 0
+        if (j, k, detail) in self.mForSubtreeCache:
+            return self.mForSubtreeCache[j, k, detail]
         thisQueue = Queue()
         thisQueue.put((j, k))
         while not thisQueue.empty():
+            thisSum = 0
             currJ, currK = thisQueue.get()
-            sum += abs(self.wavelet_coefficients[currJ, currK][detail])**2
+            if (currJ, currK, detail) in self.mForSubtreeCache:
+                sum += self.mForSubtreeCache[currJ, currK, detail]
+                continue
+            thisSum += abs(self.wavelet_coefficients[currJ, currK][detail])**2
+            self.mForSubtreeCache[currJ, currK, detail] = thisSum
+            sum += thisSum
+            # sum += abs(self.wavelet_coefficients[currJ, currK][detail])**2
             if currJ + 1 <= self.max_depth:
                 for i in range(0, 4):
                     thisQueue.put(self.getXthChildIndex(currJ, currK, i))
+        self.mForSubtreeCache[j, k, detail] = sum
         return sum
 
     def calcF(self, j, k, detail):
