@@ -17,6 +17,7 @@ class TwoDimBesovTree:
     max_depth: int
     start_level: int = 0
     mForSubtreeCache = {}
+    mForSubtreeAllDetailsCache = {}
 
     def __post_init__(self):
         # self.j_max = self.getMaxDepth()
@@ -55,6 +56,39 @@ class TwoDimBesovTree:
         self.mForSubtreeCache[j, k, detail] = sum
         return sum
 
+    # should return {"cV":10, "cH": 10, "cD": 10}
+    def mForSubtreeAllDetails(self, j, k):
+        sum = {"cV": 0, "cH": 0, "cD": 0}
+
+        if (j, k) in self.mForSubtreeAllDetailsCache:
+            return self.mForSubtreeAllDetailsCache[j, k]
+        thisQueue = Queue()
+        thisQueue.put((j, k))
+
+        while not thisQueue.empty():
+            thisSum = {"cV": 0, "cH": 0, "cD": 0}
+            currJ, currK = thisQueue.get()
+            if (currJ, currK) in self.mForSubtreeAllDetailsCache:
+                sum["cV"] += self.mForSubtreeAllDetailsCache[currJ, currK]["cV"]
+                sum["cH"] += self.mForSubtreeAllDetailsCache[currJ, currK]["cH"]
+                sum["cD"] += self.mForSubtreeAllDetailsCache[currJ, currK]["cD"]
+                thisSum["cV"] = abs(self.wavelet_coefficients[currJ, currK]["cV"])**2
+                thisSum["cH"] = abs(self.wavelet_coefficients[currJ, currK]["cH"])**2
+                thisSum["cD"] = abs(self.wavelet_coefficients[currJ, currK]["cD"])**2
+                continue
+
+            self.mForSubtreeAllDetailsCache[currJ, currK] = thisSum
+
+            sum["cV"] += thisSum["cV"]
+            sum["cH"] += thisSum["cH"]
+            sum["cD"] += thisSum["cD"]
+            if currJ + 1 <= self.max_depth:
+                for i in range(0, 4):
+
+                    thisQueue.put(self.getXthChildIndex(currJ, currK, i))
+        self.mForSubtreeAllDetailsCache[j, k] = sum
+        return sum
+
     def calcF(self, j, k, detail):
         assert detail in ["cH", "cV", "cD"], "detail must be one of cH, cV, cD"
         return .25 * abs(self.wavelet_coefficients[j, k][detail]) ** 2
@@ -77,14 +111,14 @@ class TwoDimBesovTree:
         # print(s)
         j_c, k_c = self.getXthChildIndex(j, k, child_index)
 
+        subTreeVals = {key: value*.5 for key, value in self.mForSubtreeAllDetails(j_c, k_c).items()}
         for detail in ["cH", "cV", "cD"]:
-            subTreeVal = .5 * self.mForSubtree(j_c, k_c, detail)
-            if self.F[j_c, k_c, detail] - math.log(self.beta) < subTreeVal - s * math.log(1 - self.beta):
+            if self.F[j_c, k_c, detail] - math.log(self.beta) < subTreeVals[detail] - s * math.log(1 - self.beta):
                 self.t[j_c, k_c, detail] = 1
                 self.F[j, k, detail] = self.F[j, k, detail] + self.F[j_c, k_c, detail] - math.log(self.beta)
             else:
                 self.t[j_c, k_c, detail] = 0
-                self.F[j, k, detail] = self.F[j, k, detail] + subTreeVal - s * math.log(1 - self.beta)
+                self.F[j, k, detail] = self.F[j, k, detail] + subTreeVals[detail] - s * math.log(1 - self.beta)
 
     def createConnectedTree(self):
         t_tilde = {}
