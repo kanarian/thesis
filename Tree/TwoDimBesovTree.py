@@ -1,13 +1,12 @@
 from dataclasses import dataclass
-from queue import Queue
 import math
 import pywt
 import numpy as np
 import WaveletTransform.TwoDWaveletTransformer as wt2d
+import WaveletTransform.TwoDWaveletTransformer as wt2d
 from collections import defaultdict
-import copy
-
-
+from collections import deque
+from numba import jit
 
 @dataclass
 class TwoDimBesovTree:
@@ -16,7 +15,7 @@ class TwoDimBesovTree:
     beta: float
     max_depth: int
     start_level: int = 0
-    mForSubtreeCache = {}
+    mForSubtreeAllDetailsCache = {}
 
     def __post_init__(self):
         # self.j_max = self.getMaxDepth()
@@ -32,32 +31,41 @@ class TwoDimBesovTree:
         assert i >= 0 and i <= 3, "i must be between 0 and 3"
         return j + 1, 4 * k + i
 
-    def mForSubtree(self, j, k, detail):
-        assert detail in ["cH", "cV", "cD"], "detail must be one of cH, cV, cD"
-        sum = 0
-        if (j, k, detail) in self.mForSubtreeCache:
-            return self.mForSubtreeCache[j, k, detail]
-        thisQueue = Queue()
-        thisQueue.put((j, k))
-        while not thisQueue.empty():
-            thisSum = 0
-            currJ, currK = thisQueue.get()
-            if (currJ, currK, detail) in self.mForSubtreeCache:
-                sum += self.mForSubtreeCache[currJ, currK, detail]
+    # should return {"cV":10, "cH": 10, "cD": 10}
+    def mForSubtreeAllDetails(self, j, k):
+        sum = {"cV": 0, "cH": 0, "cD": 0}
+
+        if (j, k) in self.mForSubtreeAllDetailsCache:
+            return self.mForSubtreeAllDetailsCache[j, k]
+        thisQueue = deque()
+        thisQueue.append((j, k))
+
+        while thisQueue:
+            thisSum = {"cV": 0, "cH": 0, "cD": 0}
+            currJ, currK = thisQueue.pop()
+            if (currJ, currK) in self.mForSubtreeAllDetailsCache:
+                sum["cV"] += .5*self.mForSubtreeAllDetailsCache[currJ, currK]["cV"]
+                sum["cH"] += .5*self.mForSubtreeAllDetailsCache[currJ, currK]["cH"]
+                sum["cD"] += .5*self.mForSubtreeAllDetailsCache[currJ, currK]["cD"]
+                thisSum["cV"] = .5*self.wavelet_coefficients[currJ, currK]["cV"]**2
+                thisSum["cH"] = .5*self.wavelet_coefficients[currJ, currK]["cH"]**2
+                thisSum["cD"] = .5*self.wavelet_coefficients[currJ, currK]["cD"]**2
                 continue
-            thisSum += abs(self.wavelet_coefficients[currJ, currK][detail])**2
-            self.mForSubtreeCache[currJ, currK, detail] = thisSum
-            sum += thisSum
-            # sum += abs(self.wavelet_coefficients[currJ, currK][detail])**2
+
+            self.mForSubtreeAllDetailsCache[currJ, currK] = thisSum
+
+            sum["cV"] += thisSum["cV"]
+            sum["cH"] += thisSum["cH"]
+            sum["cD"] += thisSum["cD"]
             if currJ + 1 <= self.max_depth:
                 for i in range(0, 4):
-                    thisQueue.put(self.getXthChildIndex(currJ, currK, i))
-        self.mForSubtreeCache[j, k, detail] = sum
+                    thisQueue.append(self.getXthChildIndex(currJ, currK, i))
+        self.mForSubtreeAllDetailsCache[j, k] = sum
         return sum
 
     def calcF(self, j, k, detail):
         assert detail in ["cH", "cV", "cD"], "detail must be one of cH, cV, cD"
-        return .25 * abs(self.wavelet_coefficients[j, k][detail]) ** 2
+        return .25*self.wavelet_coefficients[j, k][detail]**2
 
     def initializeLeafs(self):
         for k in range(0, 4 ** self.max_depth):
@@ -74,17 +82,17 @@ class TwoDimBesovTree:
         assert j + 1 <= self.max_depth, "Node on max_depth has no child"
         assert child_index in [0, 1, 2, 3], "child_index must be 0, 1, 2 or 3"
         s = self.getNumberOfNodesInSubtree(j + 1)
-        # print(s)
         j_c, k_c = self.getXthChildIndex(j, k, child_index)
 
+        subTreeVals = self.mForSubtreeAllDetails(j_c, k_c)
+        thisBeta = self.beta
         for detail in ["cH", "cV", "cD"]:
-            subTreeVal = .5 * self.mForSubtree(j_c, k_c, detail)
-            if self.F[j_c, k_c, detail] - math.log(self.beta) < subTreeVal - s * math.log(1 - self.beta):
+            if self.F[j_c, k_c, detail] - math.log(thisBeta) < subTreeVals[detail] - s * math.log(1 - thisBeta):
                 self.t[j_c, k_c, detail] = 1
-                self.F[j, k, detail] = self.F[j, k, detail] + self.F[j_c, k_c, detail] - math.log(self.beta)
+                self.F[j, k, detail] = self.F[j, k, detail] + self.F[j_c, k_c, detail] - math.log(thisBeta)
             else:
                 self.t[j_c, k_c, detail] = 0
-                self.F[j, k, detail] = self.F[j, k, detail] + subTreeVal - s * math.log(1 - self.beta)
+                self.F[j, k, detail] = self.F[j, k, detail] + subTreeVals[detail] - s * math.log(1 - thisBeta)
 
     def createConnectedTree(self):
         t_tilde = {}
@@ -102,10 +110,9 @@ class TwoDimBesovTree:
         return t_tilde
 
     def copyWaveletCoefficientsZero(self):
-        g = copy.deepcopy(self.wavelet_coefficients)
-        for keys in g.keys():
-            for detail in ["cH", "cV", "cD"]:
-                g[keys][detail] = 0
+        g = {}
+        for key in self.wavelet_coefficients.keys():
+            g[key] = {"cH": 0, "cV": 0, "cD": 0}
         return g
 
 
