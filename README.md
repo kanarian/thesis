@@ -1,4 +1,4 @@
-# Thesis - Arian Joyandeh
+# Thesis - Besov Tree Python code - Arian Joyandeh
 
 To run, clone this repo, set up your virtual environment if you want, use `pip install requirements.txt` to install the needed packages.
 
