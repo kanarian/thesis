@@ -85,8 +85,7 @@ class TwoDimBesovTree:
         s = (4 ** (j + 1 + 1) - 1) / 3
         j_c, k_c = j + 1, 4 * k + child_index
 
-        # subTreeVals = self.mForSubtreeAllDetails(j_c, k_c)
-        subTreeVals= {"cV": 0, "cH": 0, "cD": 0}
+        subTreeVals = self.mForSubtreeAllDetails(j_c, k_c)
         thisBeta = self.beta
         mathLogOneMinBeta = math.log(1 - thisBeta)
         mathLogBeta = math.log(thisBeta)

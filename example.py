@@ -22,8 +22,8 @@ if __name__ == "__main__":
 
     # add some noise if you want
 
-    # thisArray = thisArray + np.random.normal(0, 0.1, thisArray.shape)
-    reconImage = Image.fromarray(thisArray * 255).convert("RGB").save("./reconImage.png")
+    thisArray = thisArray + np.random.normal(0, 0.1, thisArray.shape)
+    # reconImage = Image.fromarray(thisArray * 255).show()
 
 
     # We need to get the wavelet decomposition of our normalized image
@@ -35,8 +35,6 @@ if __name__ == "__main__":
     mode = "smooth"
 
     hsm, hde = wt2d.get2DWaveletCoefficients(thisArray, wavelet, mode)
-    print(hsm)
-    print(hde)
 
     # beta values need to be very close to 0.5 but just under it.
     beta = 0.49999
