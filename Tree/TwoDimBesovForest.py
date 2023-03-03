@@ -1,12 +1,6 @@
 from dataclasses import dataclass
-from Tree.BesovTree import BesovTree
-from PIL import Image
-import numpy as np
-import WaveletTransform.TwoDWaveletTransformer as wt2d
 import Tree.TwoDimBesovTree as tbt
-import matplotlib.pyplot as plt
-import pywt
-import math
+
 
 @dataclass
 class TwoDimBesovForest:
