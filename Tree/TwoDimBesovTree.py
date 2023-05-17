@@ -35,38 +35,27 @@ class TwoDimBesovTree:
     # should return {"cV":10, "cH": 10, "cD": 10}
     def mForSubtreeAllDetails(self, j, k):
         sum = {"cV": 0, "cH": 0, "cD": 0}
-
         if (j, k) in self.mForSubtreeAllDetailsCache:
             return self.mForSubtreeAllDetailsCache[j, k]
         thisQueue = deque()
         thisQueue.append((j, k))
-
         while thisQueue:
-            thisSum = {"cV": 0, "cH": 0, "cD": 0}
             currJ, currK = thisQueue.pop()
+            # if its in the cache, then we dont need to consider this branch any further.
             if (currJ, currK) in self.mForSubtreeAllDetailsCache:
-                sum["cV"] += .5*self.mForSubtreeAllDetailsCache[currJ, currK]["cV"]
-                sum["cH"] += .5*self.mForSubtreeAllDetailsCache[currJ, currK]["cH"]
-                sum["cD"] += .5*self.mForSubtreeAllDetailsCache[currJ, currK]["cD"]
-                thisSum["cV"] = .5*self.wavelet_coefficients[currJ, currK]["cV"]**2
-                thisSum["cH"] = .5*self.wavelet_coefficients[currJ, currK]["cH"]**2
-                thisSum["cD"] = .5*self.wavelet_coefficients[currJ, currK]["cD"]**2
-                continue
-
-            self.mForSubtreeAllDetailsCache[currJ, currK] = thisSum
-
-            sum["cV"] += thisSum["cV"]
-            sum["cH"] += thisSum["cH"]
-            sum["cD"] += thisSum["cD"]
-            if currJ + 1 <= self.max_depth:
-                for i in range(0, 4):
-                    thisQueue.append(self.getXthChildIndex(currJ, currK, i))
+                sum["cV"] += self.mForSubtreeAllDetailsCache[currJ, currK]["cV"]
+                sum["cH"] += self.mForSubtreeAllDetailsCache[currJ, currK]["cH"]
+                sum["cD"] += self.mForSubtreeAllDetailsCache[currJ, currK]["cD"]
+            # if its not in the cache, than we'll need to add the values and consider the children
+            else:
+                sum["cV"] += self.wavelet_coefficients[currJ, currK]["cV"]**2
+                sum["cH"] += self.wavelet_coefficients[currJ, currK]["cH"]**2
+                sum["cD"] += self.wavelet_coefficients[currJ, currK]["cD"]**2
+                if currJ + 1 <= self.max_depth:
+                    for i in range(0, 4):
+                        thisQueue.append(self.getXthChildIndex(currJ, currK, i))
         self.mForSubtreeAllDetailsCache[j, k] = sum
         return sum
-
-    # def calcF(self, j, k, detail):
-    #     assert detail in ["cH", "cV", "cD"], "detail must be one of cH, cV, cD"
-    #     return .25*self.wavelet_coefficients[j, k][detail]**2
 
     def initializeLeafs(self):
         for k in range(0, 4 ** self.max_depth):
@@ -82,7 +71,7 @@ class TwoDimBesovTree:
     def considerSubTree(self, j, k, child_index):
         # assert j + 1 <= self.max_depth, "Node on max_depth has no child"
         # assert child_index in [0, 1, 2, 3], "child_index must be 0, 1, 2 or 3"
-        s = (4 ** (j + 1 + 1) - 1) / 3
+        s = self.getNumberOfNodesInSubtree(j + 1)
         j_c, k_c = j + 1, 4 * k + child_index
 
         subTreeVals = self.mForSubtreeAllDetails(j_c, k_c)
@@ -92,7 +81,7 @@ class TwoDimBesovTree:
 
 
         for detail in ["cH", "cV", "cD"]:
-            thisDetail = subTreeVals[detail]
+            thisDetail = subTreeVals[detail] * .5
             F_jkd = self.F[j, k, detail]
             F_jkcd = self.F[j_c, k_c, detail]
             if F_jkcd - math.log(thisBeta) < thisDetail - s * mathLogOneMinBeta:
