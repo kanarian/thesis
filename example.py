@@ -2,11 +2,13 @@ from PIL import Image
 import numpy as np
 import WaveletTransform.TwoDWaveletTransformer as wt2d
 import Tree.TwoDimBesovForest as tbf
-import matplotlib.pyplot as plt
+from utils.plot_grid import plot_grid
 
 if __name__ == "__main__":
-    # Opening the "cloud_dalle.png" image (1024x1024 dimension)
-    thisImage = Image.open("cloud_dalle.png")
+    # Opening the "cloud_dalle.png" image (1024x1024 dimension) or "Koala.jpg" image (512x512 dimension)
+    # thisImage = Image.open("cloud_dalle.png")
+    thisImage = Image.open("Koala.jpg")
+
     # We want to crop out the middle (512x512) section of the image, because some images might not be
     (new_width, new_height) = (512, 512)
     width, height = thisImage.size  # Get dimensions
@@ -36,17 +38,20 @@ if __name__ == "__main__":
 
     hsm, hde = wt2d.get2DWaveletCoefficients(thisArray, wavelet, mode)
 
-    # beta values need to be very close to 0.5 but just under it.
-    beta = 0.49999
-    # max_level is 8 for an image of size 512 by 512. (2^(8+1) = 512)
-    # start_level refers to at which level the tree algorithm should start running
-    besovForest = tbf.TwoDimBesovForest(hde, beta, max_level=8, start_level=4)
+    betas = [0.2, 0.4, 0.45, 0.49, 0.4999, 0.51]
+    reconImages = []
+    for beta in betas:
+        # beta values need to be very close to 0.5 but just under it.
+        # max_level is 8 for an image of size 512 by 512. (2^(8+1) = 512)
+        # start_level refers to at which level the tree algorithm should start running
+        besovForest = tbf.TwoDimBesovForest(hde, beta, max_level=8, start_level=0)
 
-    # running the algorithm to get the new coefficients according to the algorithm
-    newCoeffs = besovForest.getMinimizingPosteriorCoefficients()
+        # running the algorithm to get the new coefficients according to the algorithm
+        newCoeffs = besovForest.getMinimizingPosteriorCoefficients()
 
-    reconArray = wt2d.inverse2DDWT((hsm, newCoeffs), wavelet, mode)
-    reconImage = Image.fromarray(reconArray*255)
-    reconImage.show()
+        reconArray = wt2d.inverse2DDWT((hsm, newCoeffs), wavelet, mode)
+        reconImage = Image.fromarray(reconArray*255)
+        reconImages.append(reconImage)
+    plot_grid(reconImages, n_rows=2, n_cols=3)
 
 
