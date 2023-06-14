@@ -1,25 +1,15 @@
-from dataclasses import dataclass
 import math
-import pywt
-import numpy as np
-import WaveletTransform.TwoDWaveletTransformer as wt2d
-import WaveletTransform.TwoDWaveletTransformer as wt2d
-from collections import defaultdict
 from collections import deque
-from numba import jit
 
 
-@dataclass
 class TwoDimBesovTree:
     """2D Besov Tree"""
-    wavelet_coefficients: dict
-    beta: float
-    max_depth: int
-    start_level: int = 0
-    mForSubtreeAllDetailsCache = {}
-
-    def __post_init__(self):
-        # self.j_max = self.getMaxDepth()
+    def __init__(self, wavelet_coefficients, beta, max_depth, start_level = 0):
+        self.wavelet_coefficients = wavelet_coefficients
+        self.beta = beta
+        self.max_depth = max_depth
+        self.start_level = start_level
+        self.mForSubtreeAllDetailsCache = {}
         self.t = {}
         self.F = {}
 

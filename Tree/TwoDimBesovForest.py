@@ -2,13 +2,13 @@ from dataclasses import dataclass
 import Tree.TwoDimBesovTree as tbt
 
 
-@dataclass
 class TwoDimBesovForest:
     """"One or multiple Two Dim Besov Trees"""
-    wavelet_coefficients: dict
-    beta: float
-    max_level: int
-    start_level: int = 0
+    def __init__(self, wavelet_coefficients, beta, max_level, start_level=0):
+        self.wavelet_coefficients = wavelet_coefficients
+        self.beta = beta
+        self.max_level = max_level
+        self.start_level = start_level
 
     def initializeForest(self):
         forest = {}
